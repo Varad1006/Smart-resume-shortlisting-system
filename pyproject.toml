@@ -1,0 +1,79 @@
+[project]
+name = "resume-shortlister"
+version = "1.0.0"
+description = "Multilingual, OCR-aware resume shortlisting with explainable, requirement-level ranking."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "Varad Adhyapak" }]
+keywords = ["resume", "recruiting", "ocr", "semantic-search", "fastapi"]
+dependencies = [
+    "fastapi>=0.115,<1",
+    "uvicorn[standard]>=0.30,<1",
+    "jinja2>=3.1,<4",
+    "python-multipart>=0.0.18",
+    "pydantic>=2.9,<3",
+    "pydantic-settings>=2.6,<3",
+    "httpx>=0.27,<1",
+    "numpy>=1.26",
+    "torch>=2.4",
+    "sentence-transformers>=5.0,<7",
+    "chandra-ocr>=0.2,<0.3",
+    "beautifulsoup4>=4.12",
+    "pypdfium2>=4.30,<6",
+    "pillow>=10.2",
+    "pytesseract>=0.3.10",
+    "python-docx>=1.1,<2",
+    "langdetect>=1.0.9",
+    "openai>=1.60",
+]
+
+[project.scripts]
+resume-shortlister-download-models = "resume_shortlister.download_models:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "ruff>=0.8",
+    "fpdf2>=2.8",
+]
+
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/resume_shortlister"]
+
+# --- uv: CPU-only PyTorch on Linux (keeps the Docker image ~3 GB smaller) ---
+[tool.uv]
+environments = ["sys_platform == 'darwin'", "sys_platform == 'linux'"]
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+# --- Tooling ---
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra -m 'not slow'"
+markers = ["slow: downloads and runs the real ML models (run with: pytest -m slow)"]
+filterwarnings = [
+    "ignore::DeprecationWarning:langdetect.*",
+    "ignore::DeprecationWarning:chandra.settings",  # upstream uses class-based pydantic config
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "C4", "PT"]
+ignore = ["RUF001", "RUF002", "RUF003"]  # multilingual text legitimately contains "ambiguous" unicode
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["PT018"]  # compound assertions read naturally in tests
