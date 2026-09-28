@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <h1>Shortlist candidates with evidence</h1>
+  <p class="lead">
+    Paste a job description and upload resumes as PDF, Word, scans or phone photos, in any language.
+    Each candidate is ranked by how many of your requirements their resume actually demonstrates.
+  </p>
+  <div class="system-status" data-system-status>
+    <span class="dot" data-status-dot></span><span data-status-text>Checking OCR engines…</span>
+  </div>
+</section>
+
+<form class="card form" data-upload-form
+      data-max-files="{{ limits.max_files }}" data-max-file-mb="{{ max_file_mb }}" novalidate>
+  <div class="field">
+    <label for="job_description">Job description</label>
+    <p class="hint">
+      Every bullet or sentence becomes a requirement that is checked separately.
+      Items under “Nice to have” count half; “Benefits” and “About us” sections are ignored.
+    </p>
+    <textarea id="job_description" name="job_description" rows="12" required
+      placeholder="Android Developer (Kotlin)&#10;&#10;Requirements:&#10;- 2+ years building Android apps in Kotlin&#10;- Jetpack Compose, MVVM and Coroutines&#10;- Firebase (Auth, Firestore, Cloud Messaging)&#10;&#10;Nice to have:&#10;- CI/CD with GitHub Actions"></textarea>
+  </div>
+
+  <div class="field">
+    <span class="label">Resumes</span>
+    <div class="dropzone" data-dropzone tabindex="0" role="button" aria-label="Choose resume files">
+      <input type="file" multiple hidden data-file-input
+             accept=".pdf,.docx,.png,.jpg,.jpeg,.webp,.tif,.tiff,.bmp,.txt">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0l-4 4m4-4l4 4M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <p><strong>Drop files here</strong> or click to browse</p>
+      <p class="hint">PDF, DOCX, PNG, JPG, WEBP, TIFF or TXT · up to {{ limits.max_files }} files, {{ max_file_mb|int }} MB each</p>
+    </div>
+    <ul class="file-list" data-file-list></ul>
+  </div>
+
+  <div class="options">
+    <label class="inline" for="shortlist_size">Shortlist size
+      <input type="number" id="shortlist_size" name="shortlist_size" min="1" max="50" value="{{ default_shortlist_size }}">
+    </label>
+    <label class="checkbox">
+      <input type="checkbox" name="include_social" value="true">
+      <span>Add a bonus of up to +{{ social_max_bonus|int }} for public GitHub / LeetCode / CodeChef activity
+        <span class="hint">(never penalises candidates without profiles)</span></span>
+    </label>
+    {% if llm.configured %}
+    <label class="checkbox">
+      <input type="checkbox" name="include_insights" value="true">
+      <span>Write AI summaries for the top {{ llm.max_candidates }} candidates with <strong>{{ llm.name }}</strong>
+        <span class="hint">(sends their resume text, with emails and phone numbers removed, to {{ llm.host }};
+        summaries never change scores)</span></span>
+    </label>
+    {% endif %}
+  </div>
+
+  <div class="form-error" data-form-error hidden role="alert"></div>
+  <div class="form-actions">
+    <button type="submit" class="btn primary" data-submit>Rank resumes</button>
+  </div>
+</form>
+
+<section class="how">
+  <h2>How ranking works</h2>
+  <ol class="steps">
+    <li><strong>Read.</strong> Each file's embedded text is used where it exists; scans, photos and handwriting go through
+      <em>Chandra OCR</em> (90+ languages), with Tesseract as a fallback.</li>
+    <li><strong>Retrieve.</strong> A multilingual model compares the job with every passage of every resume, so a
+      Hindi or French resume can match an English job description.</li>
+    <li><strong>Match requirements.</strong> A cross-encoder scores each requirement against the most relevant
+      passages and keeps the evidence it found.</li>
+    <li><strong>Rank.</strong> Score = {{ coverage_pct }}% requirement coverage + {{ semantic_pct }}% semantic similarity,
+      plus the optional profile bonus.</li>
+    {% if llm.configured %}
+    <li><strong>Explain (optional).</strong> {{ llm.name }} writes a short assessment of the top candidates:
+      strengths, gaps and interview questions.</li>
+    {% endif %}
+  </ol>
+</section>
+{% endblock %}

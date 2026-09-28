@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+{% block title %}{{ run.title }} · Smart Resume Shortlisting{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <a class="back" href="/shortlists">← History</a>
+    <h1>{{ run.title }}</h1>
+    <p class="muted">Created {{ run.created_at|when }} · {{ run.document_count }} file{{ "" if run.document_count == 1 else "s" }}</p>
+  </div>
+  <div class="actions">
+    {% if run.status == "completed" %}
+      <a class="btn secondary" href="/api/v1/shortlists/{{ run.id }}" download="shortlist-{{ run.id }}.json">Download JSON</a>
+    {% endif %}
+    <button type="button" class="btn danger-ghost" data-delete-run="{{ run.id }}">Delete</button>
+  </div>
+</div>
+
+{% if run.status in ("queued", "running") %}
+  {% set progress = overall_progress(run.stage, run.progress_done, run.progress_total) %}
+  <section class="card progress-card" data-poll-run="{{ run.id }}" aria-live="polite">
+    <h2>Processing…</h2>
+    <ol class="stages" data-stages>
+      {% for stage, label in STAGES %}
+        {% if (stage != "profiles" or run.options.include_social) and (stage != "insights" or run.options.include_insights) %}
+        <li data-stage="{{ stage }}">{{ label }}</li>
+        {% endif %}
+      {% endfor %}
+    </ol>
+    <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ progress }}" data-progress-bar>
+      <div class="progress-fill" style="width: {{ progress }}%"></div>
+    </div>
+    <p class="muted" data-progress-text data-initial-stage="{{ run.stage }}" data-initial-done="{{ run.progress_done }}" data-initial-total="{{ run.progress_total }}">Starting…</p>
+  </section>
+
+{% elif run.status == "failed" %}
+  <section class="card alert">
+    <h2>This run failed</h2>
+    <p>{{ run.error or "Unknown error." }}</p>
+    <a class="btn secondary" href="/">Try again</a>
+  </section>
+
+{% else %}
+  {% set shortlisted = result.shortlisted %}
+  <section class="stats">
+    <div class="stat"><span class="stat-value">{{ result.candidates|length }}</span><span class="stat-label">resumes ranked</span></div>
+    <div class="stat"><span class="stat-value">{{ shortlisted|length }}</span><span class="stat-label">shortlisted</span></div>
+    <div class="stat"><span class="stat-value">{{ result.skipped|length }}</span><span class="stat-label">skipped</span></div>
+    <div class="stat"><span class="stat-value">{{ "%.1f"|format(result.timings.get("total_s", 0)) }}s</span><span class="stat-label">processing time</span></div>
+  </section>
+
+  {% if not result.candidates %}
+    <div class="card empty">
+      <h2>No resumes could be read</h2>
+      <p class="muted">See the skipped files below for the reason.</p>
+    </div>
+  {% else %}
+  <section class="section">
+    <div class="section-head">
+      <h2>Shortlist</h2>
+      <p class="muted">Ranked by requirement coverage and semantic similarity{% if result.social_enabled %}, plus the public-profile bonus{% endif %}.{% if result.insights_enabled %} AI summaries for the top {{ result.candidates|selectattr("insight")|list|length }} explain the ranking; they never change scores.{% endif %}</p>
+    </div>
+
+    {% for c in shortlisted %}
+    {% set b = c.final_score|band %}
+    <article class="candidate card">
+      <header class="candidate-head">
+        <span class="rank{% if c.final_rank == 1 %} rank-first{% endif %}">#{{ c.final_rank }}</span>
+        <div class="candidate-id">
+          <h3>{{ c.filename }}</h3>
+          <div class="badges">
+            <span class="badge">{{ c.language|language_name }}</span>
+            {% for m in c.extraction_methods %}
+              <span class="badge{% if m.is_ocr %} badge-ocr{% endif %}">{{ m|method_label }}</span>
+            {% endfor %}
+            {% if c.pages > 1 %}<span class="badge">{{ c.pages }} pages</span>{% endif %}
+            {% for w in c.warnings %}<span class="badge badge-warn" title="{{ w }}">⚠ {{ w }}</span>{% endfor %}
+          </div>
+        </div>
+        <div class="score score-{{ b }}">
+          <strong>{{ c.final_score|score }}</strong>
+          <span>{{ b|capitalize }} match</span>
+        </div>
+      </header>
+
+      <div class="meters">
+        <div class="meter">
+          <div class="meter-label"><span>Requirement coverage</span><span>{{ c.coverage_score|score }}</span></div>
+          <div class="meter-track"><div class="meter-fill fill-coverage" style="width: {{ c.coverage_score or 0 }}%"></div></div>
+        </div>
+        <div class="meter">
+          <div class="meter-label"><span>Semantic similarity</span><span>{{ c.semantic_score|score }}</span></div>
+          <div class="meter-track"><div class="meter-fill fill-semantic" style="width: {{ c.semantic_score }}%"></div></div>
+        </div>
+        {% if result.social_enabled %}
+        <div class="meter">
+          <div class="meter-label"><span>Profile bonus</span><span>+{{ c.social_bonus|score }}</span></div>
+          <div class="meter-track"><div class="meter-fill fill-social" style="width: {{ (c.social.score if c.social and c.social.score is not none else 0) }}%"></div></div>
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="chips" aria-label="Requirement coverage">
+        {% for m in c.requirement_matches %}
+          {% set r = requirements[m.requirement_id] %}
+          <span class="chip chip-{{ m.score|level }}" title="R{{ r.id }} · {{ m.score|pct }}% · {{ r.text }}">R{{ r.id }}</span>
+        {% endfor %}
+      </div>
+
+      {% if c.insight %}
+      <section class="insight" aria-label="AI summary">
+        <div class="insight-head">
+          <span class="ai-badge">AI summary</span>
+          <span class="muted small">{{ c.insight.model }}</span>
+        </div>
+        <p>{{ c.insight.summary }}</p>
+        <div class="insight-grid">
+          {% if c.insight.strengths %}
+          <div><h4>Strengths</h4><ul class="ticks">{% for item in c.insight.strengths %}<li>{{ item }}</li>{% endfor %}</ul></div>
+          {% endif %}
+          {% if c.insight.gaps %}
+          <div><h4>Gaps</h4><ul class="gaps">{% for item in c.insight.gaps %}<li>{{ item }}</li>{% endfor %}</ul></div>
+          {% endif %}
+        </div>
+        {% if c.insight.interview_questions %}
+        <details class="questions">
+          <summary>Suggested interview questions</summary>
+          <ol>{% for item in c.insight.interview_questions %}<li>{{ item }}</li>{% endfor %}</ol>
+        </details>
+        {% endif %}
+      </section>
+      {% elif c.insight_error %}
+      <p class="insight-error small">AI summary unavailable: {{ c.insight_error }}</p>
+      {% endif %}
+
+      <details class="evidence">
+        <summary>Evidence and details</summary>
+        <table class="table compact">
+          <thead><tr><th>Requirement</th><th class="num">Match</th><th>Evidence from the resume</th></tr></thead>
+          <tbody>
+            {% for m in c.requirement_matches|sort(attribute="score", reverse=True) %}
+              {% set r = requirements[m.requirement_id] %}
+              <tr>
+                <td><span class="chip chip-{{ m.score|level }}">R{{ r.id }}</span> {{ r.text }}{% if r.optional %} <span class="muted">(nice to have)</span>{% endif %}</td>
+                <td class="num">{{ m.score|pct }}%</td>
+                <td class="quote">{{ m.evidence or "—" }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+        {% if c.profiles.github or c.profiles.leetcode or c.profiles.codechef %}
+        <div class="profiles">
+          <h4>Public profiles</h4>
+          <ul>
+            {% if c.profiles.github %}
+              <li><a href="https://github.com/{{ c.profiles.github }}" target="_blank" rel="noopener noreferrer">GitHub @{{ c.profiles.github }}</a>
+                {% if c.social and c.social.github %}<span class="muted">· {{ c.social.github.public_repos }} repos · {{ c.social.github.total_stars }} stars · {{ c.social.github.followers }} followers</span>{% endif %}</li>
+            {% endif %}
+            {% if c.profiles.leetcode %}
+              <li><a href="https://leetcode.com/u/{{ c.profiles.leetcode }}/" target="_blank" rel="noopener noreferrer">LeetCode @{{ c.profiles.leetcode }}</a>
+                {% if c.social and c.social.leetcode %}<span class="muted">· {{ c.social.leetcode.solved_total }} solved ({{ c.social.leetcode.easy }} easy / {{ c.social.leetcode.medium }} medium / {{ c.social.leetcode.hard }} hard)</span>{% endif %}</li>
+            {% endif %}
+            {% if c.profiles.codechef %}
+              <li><a href="https://www.codechef.com/users/{{ c.profiles.codechef }}" target="_blank" rel="noopener noreferrer">CodeChef @{{ c.profiles.codechef }}</a>
+                {% if c.social and c.social.codechef %}<span class="muted">· rating {{ c.social.codechef.rating if c.social.codechef.rating is not none else "—" }}{% if c.social.codechef.problems_solved is not none %} · {{ c.social.codechef.problems_solved }} solved{% endif %}</span>{% endif %}</li>
+            {% endif %}
+          </ul>
+          {% if c.social and c.social.errors %}
+            <p class="muted small">{{ c.social.errors|join(" · ") }}</p>
+          {% endif %}
+        </div>
+        {% endif %}
+      </details>
+    </article>
+    {% endfor %}
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <h2>Job requirements</h2>
+      <p class="muted">Parsed from the job description. Each one is matched separately; “nice to have” items count half.</p>
+    </div>
+    <ol class="card requirements">
+      {% for r in result.requirements %}
+        <li><span class="req-id">R{{ r.id }}</span> {{ r.text }}{% if r.optional %} <span class="badge">nice to have</span>{% endif %}</li>
+      {% endfor %}
+    </ol>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <h2>All resumes</h2>
+      <p class="muted">Stage 1 ranks every resume by semantic similarity; the top {{ result.candidates|selectattr("reranked")|list|length }} go on to requirement matching.</p>
+    </div>
+    <div class="card table-wrap">
+      <table class="table">
+        <thead>
+          <tr><th class="num">Stage 1</th><th>File</th><th>Language</th><th>Read with</th><th class="num">Semantic</th><th class="num">Coverage</th><th class="num">Final</th></tr>
+        </thead>
+        <tbody>
+          {% for c in result.by_retrieval %}
+          <tr{% if c.shortlisted %} class="row-shortlisted"{% endif %}>
+            <td class="num">{{ c.retrieval_rank }}</td>
+            <td>{{ c.filename }}{% if c.shortlisted %} <span class="badge badge-accent">#{{ c.final_rank }}</span>{% endif %}</td>
+            <td>{{ c.language|language_name }}</td>
+            <td>{% for m in c.extraction_methods %}{{ m|method_label }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
+            <td class="num">{{ c.semantic_score|score }}</td>
+            <td class="num">{{ c.coverage_score|score }}</td>
+            <td class="num"><strong>{{ c.final_score|score }}</strong></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% endif %}
+
+  {% if result.skipped %}
+  <section class="section">
+    <div class="section-head"><h2>Skipped files</h2></div>
+    <ul class="card skipped">
+      {% for s in result.skipped %}
+        <li><strong>{{ s.filename }}</strong><span class="muted">{{ s.reason }}</span></li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  <details class="card jd">
+    <summary>Job description</summary>
+    <pre>{{ run.job_description }}</pre>
+  </details>
+{% endif %}
+{% endblock %}

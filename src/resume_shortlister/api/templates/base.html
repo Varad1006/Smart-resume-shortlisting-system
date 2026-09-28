@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Smart Resume Shortlisting{% endblock %}</title>
+  <link rel="icon" href="/static/favicon.svg?v={{ version }}" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/css/app.css?v={{ version }}">
+  <script src="/static/js/app.js?v={{ version }}" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="/">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11l2 2 4-4M7 3h7l5 5v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Smart Resume Shortlisting</span>
+      </a>
+      <nav aria-label="Main">
+        <a href="/" {% if request.url.path == "/" %}aria-current="page"{% endif %}>New shortlist</a>
+        <a href="/shortlists" {% if request.url.path.startswith("/shortlists") %}aria-current="page"{% endif %}>History</a>
+        <a href="/docs">API</a>
+      </nav>
+    </div>
+  </header>
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="footer">
+    Resumes are processed on this server. Only scores and short evidence snippets are stored.
+  </footer>
+</body>
+</html>

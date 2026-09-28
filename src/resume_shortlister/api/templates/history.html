@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}History · Smart Resume Shortlisting{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>History</h1>
+    <p class="muted">{{ total }} shortlist{{ "" if total == 1 else "s" }}</p>
+  </div>
+  <a class="btn primary" href="/">New shortlist</a>
+</div>
+
+{% if not items %}
+  <div class="card empty">
+    <p>No shortlists yet.</p>
+    <a class="btn secondary" href="/">Create your first shortlist</a>
+  </div>
+{% else %}
+  <div class="card table-wrap">
+    <table class="table">
+      <thead>
+        <tr><th>Created</th><th>Job</th><th class="num">Files</th><th>Status</th><th>Top candidate</th></tr>
+      </thead>
+      <tbody>
+        {% for item in items %}
+        <tr>
+          <td class="nowrap">{{ item.created_at|when }}</td>
+          <td><a href="/shortlists/{{ item.id }}">{{ item.title }}</a></td>
+          <td class="num">{{ item.document_count }}</td>
+          <td><span class="status status-{{ item.status }}">{{ item.status }}</span></td>
+          <td>
+            {% if item.top_candidate %}{{ item.top_candidate }}
+              <span class="muted">· {{ item.top_score|score }}</span>
+            {% else %}<span class="muted">—</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <nav class="pager" aria-label="Pagination">
+    {% if page > 1 %}<a class="btn secondary" href="/shortlists?page={{ page - 1 }}">← Newer</a>{% endif %}
+    {% if has_next %}<a class="btn secondary" href="/shortlists?page={{ page + 1 }}">Older →</a>{% endif %}
+  </nav>
+{% endif %}
+{% endblock %}
