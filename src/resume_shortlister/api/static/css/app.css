@@ -1,27 +1,30 @@
 /* Smart Resume Shortlisting: self-contained stylesheet (no CDN, works offline). */
 
+/* Palette: teal accents on warm neutral stone (light) / charcoal (dark).
+   Every text/background pair below meets WCAG AA (>= 4.5:1). */
 :root {
-  --bg: #f5f6fa;
+  --bg: #f6f5f2;
   --surface: #ffffff;
-  --surface-2: #f8f9fc;
-  --text: #0f172a;
-  --muted: #64748b;
-  --border: #e2e8f0;
-  --accent: #4f46e5;
-  --accent-hover: #4338ca;
-  --accent-soft: #eef2ff;
+  --surface-2: #faf8f5;
+  --text: #1c1917;
+  --muted: #6b645c;
+  --border: #e7e2da;
+  --accent: #0f766e;
+  --accent-hover: #115e59;
+  --accent-soft: #e3f3ef;
+  --on-accent: #ffffff;
   --good: #15803d;
   --good-soft: #dcfce7;
-  --warn: #b45309;
+  --warn: #a3480a;
   --warn-soft: #fef3c7;
   --bad: #b91c1c;
   --bad-soft: #fee2e2;
-  --neutral-soft: #f1f5f9;
-  --fill-coverage: #4f46e5;
-  --fill-semantic: #0891b2;
+  --neutral-soft: #f1eee9;
+  --fill-coverage: #0f766e;
+  --fill-semantic: #0284c7;
   --fill-social: #d97706;
   --radius: 12px;
-  --shadow: 0 1px 2px rgb(15 23 42 / 0.06), 0 1px 3px rgb(15 23 42 / 0.04);
+  --shadow: 0 1px 2px rgb(28 25 23 / 0.06), 0 1px 3px rgb(28 25 23 / 0.04);
   --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans",
     "Noto Sans Devanagari", "Helvetica Neue", Arial, sans-serif;
   --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -30,24 +33,25 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0b1020;
-    --surface: #121a2e;
-    --surface-2: #0f1627;
-    --text: #e2e8f0;
-    --muted: #94a3b8;
-    --border: #22304d;
-    --accent: #818cf8;
-    --accent-hover: #a5b4fc;
-    --accent-soft: #1e1b4b;
+    --bg: #101413;
+    --surface: #171c1b;
+    --surface-2: #131817;
+    --text: #e7ecea;
+    --muted: #9aa6a2;
+    --border: #28312f;
+    --accent: #2dd4bf;
+    --accent-hover: #5eead4;
+    --accent-soft: #112f2b;
+    --on-accent: #052622;
     --good: #4ade80;
-    --good-soft: #052e16;
+    --good-soft: #0f2e1c;
     --warn: #fbbf24;
-    --warn-soft: #3b2a06;
+    --warn-soft: #33270b;
     --bad: #f87171;
-    --bad-soft: #3f1212;
-    --neutral-soft: #1a2338;
-    --fill-coverage: #818cf8;
-    --fill-semantic: #22d3ee;
+    --bad-soft: #3a1414;
+    --neutral-soft: #1f2725;
+    --fill-coverage: #2dd4bf;
+    --fill-semantic: #38bdf8;
     --fill-social: #fbbf24;
     --shadow: none;
     color-scheme: dark;
@@ -117,9 +121,8 @@ nav a[aria-current="page"] { color: var(--accent); background: var(--accent-soft
 }
 .btn:hover { text-decoration: none; }
 .btn:disabled { opacity: 0.6; cursor: progress; }
-.btn.primary { background: var(--accent); color: #fff; }
+.btn.primary { background: var(--accent); color: var(--on-accent); }
 .btn.primary:hover:not(:disabled) { background: var(--accent-hover); }
-@media (prefers-color-scheme: dark) { .btn.primary { color: #0b1020; } }
 .btn.secondary { background: var(--surface); border-color: var(--border); color: var(--text); }
 .btn.secondary:hover { background: var(--neutral-soft); }
 .btn.danger-ghost { background: transparent; border-color: var(--border); color: var(--bad); }
@@ -224,8 +227,7 @@ textarea:focus, input:focus, .dropzone:focus-visible {
   flex: none; width: 2.6rem; height: 2.6rem; border-radius: 50%; display: grid;
   place-items: center; font-weight: 700; background: var(--accent-soft); color: var(--accent);
 }
-.rank-first { background: var(--accent); color: #fff; }
-@media (prefers-color-scheme: dark) { .rank-first { color: #0b1020; } }
+.rank-first { background: var(--accent); color: var(--on-accent); }
 .candidate-id { flex: 1; min-width: 0; }
 .candidate-id h3 { margin: 0.15rem 0 0.35rem; overflow-wrap: anywhere; }
 .badges { display: flex; flex-wrap: wrap; gap: 0.3rem; }
@@ -235,7 +237,7 @@ textarea:focus, input:focus, .dropzone:focus-visible {
 }
 .badge-ocr { background: var(--accent-soft); color: var(--accent); }
 .badge-warn { background: var(--warn-soft); color: var(--warn); }
-.badge-accent { background: var(--accent); color: #fff; }
+.badge-accent { background: var(--accent); color: var(--on-accent); }
 .score { text-align: right; flex: none; }
 .score strong { display: block; font-size: 1.7rem; line-height: 1.1; }
 .score span { font-size: 0.8rem; font-weight: 600; }

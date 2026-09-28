@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 from typing import Annotated
 
@@ -15,8 +16,21 @@ from resume_shortlister.bootstrap import llm_status
 from resume_shortlister.domain.errors import NotFoundError
 
 TEMPLATES_DIR = Path(__file__).resolve().parent.parent / "templates"
+STATIC_DIR = TEMPLATES_DIR.parent / "static"
+
+
+def asset_version(directory: Path = STATIC_DIR) -> str:
+    """Content hash of the static files: changes whenever CSS/JS change (cache busting)."""
+    digest = hashlib.sha256()
+    for path in sorted(p for p in directory.rglob("*") if p.is_file()):
+        digest.update(path.relative_to(directory).as_posix().encode())
+        digest.update(path.read_bytes())
+    return digest.hexdigest()[:12]
+
+
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
 register(templates.env)
+templates.env.globals["asset_version"] = asset_version()
 
 router = APIRouter(include_in_schema=False)
 HISTORY_PAGE_SIZE = 20

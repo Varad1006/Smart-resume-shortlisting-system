@@ -6,6 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from resume_shortlister.api.app import create_app
+from resume_shortlister.api.routes.ui import asset_version
 from resume_shortlister.application.shortlist_service import ShortlistService
 from resume_shortlister.bootstrap import Container
 from resume_shortlister.config import Settings
@@ -162,5 +163,6 @@ def test_pages_and_system_endpoints(client):
     status = client.get("/api/v1/status").json()
     assert status["status"] == "ok" and status["ocr"]["mode"] == "none"
     assert client.get("/static/css/app.css").status_code == 200
+    assert f"/static/css/app.css?v={asset_version()}" in home.text  # content-hash cache busting
     assert client.get("/static/js/app.js").status_code == 200
     assert client.get("/openapi.json").json()["info"]["title"] == "Smart Resume Shortlisting System"
