@@ -1,0 +1,67 @@
+# Default:         docker compose up --build            -> app on http://localhost:8000
+# With Chandra:    docker compose --profile gpu up      -> also starts a Chandra OCR server
+#                  (needs an NVIDIA GPU with >= 24 GB VRAM and the NVIDIA container toolkit)
+name: resume-shortlister
+
+services:
+  app:
+    build:
+      context: .
+      target: runtime
+      args:
+        PRELOAD_MODELS: "1"
+    image: resume-shortlister:latest
+    ports:
+      - "127.0.0.1:${APP_PORT:-8000}:8000"  # localhost only: the app has no authentication
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      # Point this at any OpenAI-compatible server hosting datalab-to/chandra-ocr-2.
+      CHANDRA_API_BASE: ${CHANDRA_API_BASE:-http://chandra:8000/v1}
+    volumes:
+      - app-data:/data
+    restart: unless-stopped
+    depends_on:
+      chandra:
+        condition: service_started
+        required: false  # without the gpu profile the app falls back to Tesseract
+
+  chandra:
+    profiles: ["gpu"]
+    image: vllm/vllm-openai:v0.17.0
+    command:
+      - --model
+      - datalab-to/chandra-ocr-2
+      - --served-model-name
+      - chandra
+      - --dtype
+      - bfloat16
+      - --max-model-len
+      - "18000"
+      - --max-num-seqs
+      - "${CHANDRA_MAX_NUM_SEQS:-16}"
+      - --max-num-batched-tokens
+      - "${CHANDRA_MAX_BATCHED_TOKENS:-2048}"
+      - --gpu-memory-utilization
+      - "0.85"
+      - --enable-prefix-caching
+      - --mm-processor-kwargs
+      - '{"min_pixels": 3136, "max_pixels": 6291456}'
+    environment:
+      HF_TOKEN: ${HF_TOKEN:-}
+    ipc: host
+    volumes:
+      - hf-cache:/root/.cache/huggingface
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+volumes:
+  app-data:
+  hf-cache:
