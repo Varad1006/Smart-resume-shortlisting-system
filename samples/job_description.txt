@@ -1,0 +1,16 @@
+Android Developer (Kotlin)
+
+We are hiring an Android engineer to build and maintain our consumer mobile apps.
+
+Requirements:
+- 2+ years of Android development with Kotlin
+- Jetpack Compose and MVVM architecture
+- Coroutines, Room and Retrofit
+- Firebase (Auth, Firestore, Cloud Messaging)
+- Publishing apps on the Google Play Store and writing unit tests
+
+Nice to have:
+- CI/CD with GitHub Actions and Hilt dependency injection
+
+Benefits:
+- Health insurance, learning budget and a competitive salary

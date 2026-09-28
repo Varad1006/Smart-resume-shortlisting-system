@@ -1,0 +1,8 @@
+Pierre Martin - Développeur Android
+Lyon, France - pierre.martin@example.com
+
+Trois ans d'expérience en développement d'applications Android avec Kotlin.
+Interfaces en Jetpack Compose, architecture MVVM, Coroutines, Room et Retrofit.
+Intégration de Firebase (Auth, Firestore, Cloud Messaging).
+A publié quatre applications sur le Google Play Store.
+Tests unitaires avec JUnit, intégration continue avec GitHub Actions, injection avec Hilt.
