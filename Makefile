@@ -6,10 +6,10 @@ install:      ## Install dependencies (uv)
 dev:          ## Run the app locally with auto-reload on http://localhost:8000
 	uv run uvicorn resume_shortlister.api.app:create_app --factory --reload
 
-test:         ## Fast test suite (no model downloads)
+test:         ## Fast test suite (no large downloads)
 	uv run pytest
 
-test-slow:    ## Ranking-quality tests with the real models (~1 GB download)
+test-slow:    ## End-to-end ranking quality (~1 GB download on first run)
 	uv run pytest -m slow
 
 lint:         ## Lint and check formatting
@@ -36,7 +36,7 @@ docker-test:  ## Run the test suite inside the production image (includes Tesser
 up:           ## Start the app (Tesseract fallback OCR)
 	docker compose up -d --build
 
-up-gpu:       ## Start the app plus the Chandra OCR server (NVIDIA GPU required)
+up-gpu:       ## Start the app plus a self-hosted OCR server (NVIDIA GPU required)
 	docker compose --profile gpu up -d --build
 
 down:         ## Stop everything

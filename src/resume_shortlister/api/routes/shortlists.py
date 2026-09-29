@@ -41,10 +41,7 @@ async def create_shortlist(
     ] = False,
     include_insights: Annotated[
         bool,
-        Form(
-            description="Ask the configured LLM for summaries of the top shortlisted "
-            "candidates (sends their redacted resume text to the LLM provider)."
-        ),
+        Form(description="Write AI summaries for the top shortlisted candidates."),
     ] = False,
 ) -> RunCreatedResponse:
     documents = await read_uploads(files, service.limits)
@@ -92,7 +89,7 @@ async def delete_shortlist(run_id: str, service: ServiceDep) -> Response:
 @router.post(
     "/extract",
     response_model=ExtractionResponse,
-    summary="Extract text from one resume (check OCR quality)",
+    summary="Extract text from one resume",
 )
 async def extract_document(
     service: ServiceDep, file: Annotated[UploadFile, File(description="One resume file.")]

@@ -26,7 +26,7 @@ class FallbackOcrEngine:
         return [status for engine in self._engines for status in engine.status()]
 
     def recognize(self, images: Sequence[Image.Image]) -> OcrOutput:
-        failures: list[str] = []
+        failed = False
         for engine in self._engines:
             if not engine.is_available():
                 continue
@@ -34,10 +34,8 @@ class FallbackOcrEngine:
                 return engine.recognize(images)
             except ExtractionError as exc:
                 logger.warning("OCR engine %s failed, trying the next one: %s", engine, exc)
-                failures.append(str(exc))
-        if failures:
-            raise ExtractionError("All OCR engines failed: " + " | ".join(failures))
-        raise OcrUnavailableError(
-            "This file needs OCR, but no OCR engine is available. Start the Chandra server "
-            "(docker compose --profile gpu up) or install Tesseract."
-        )
+                failed = True
+        if failed:
+            raise ExtractionError("The scanned pages could not be read. Please try again later.")
+        logger.warning("No OCR engine available: %s", [s.detail for s in self.status()])
+        raise OcrUnavailableError("This file is a scan, and scans can't be read right now.")

@@ -7,7 +7,7 @@
     Each candidate is ranked by how many of your requirements their resume actually demonstrates.
   </p>
   <div class="system-status" data-system-status>
-    <span class="dot" data-status-dot></span><span data-status-text>Checking OCR engines…</span>
+    <span class="dot" data-status-dot></span><span data-status-text>Checking scan support…</span>
   </div>
 </section>
 
@@ -47,9 +47,9 @@
     {% if llm.configured %}
     <label class="checkbox">
       <input type="checkbox" name="include_insights" value="true">
-      <span>Write AI summaries for the top {{ llm.max_candidates }} candidates with <strong>{{ llm.name }}</strong>
-        <span class="hint">(sends their resume text, with emails and phone numbers removed, to {{ llm.host }};
-        summaries never change scores)</span></span>
+      <span>Write AI summaries for the top {{ llm.max_candidates }} candidates
+        <span class="hint">(their resume text is shared with an external AI service, with emails and phone
+        numbers removed; summaries never change scores)</span></span>
     </label>
     {% endif %}
   </div>
@@ -63,16 +63,16 @@
 <section class="how">
   <h2>How ranking works</h2>
   <ol class="steps">
-    <li><strong>Read.</strong> Each file's embedded text is used where it exists; scans, photos and handwriting go through
-      <em>Chandra OCR</em> (90+ languages), with Tesseract as a fallback.</li>
-    <li><strong>Retrieve.</strong> A multilingual model compares the job with every passage of every resume, so a
-      Hindi or French resume can match an English job description.</li>
-    <li><strong>Match requirements.</strong> A cross-encoder scores each requirement against the most relevant
-      passages and keeps the evidence it found.</li>
+    <li><strong>Read.</strong> Digital PDFs and Word files are read directly; scans, photos and handwriting are
+      converted to text (90+ languages).</li>
+    <li><strong>Compare.</strong> Every passage of every resume is compared with the job by meaning, not keywords,
+      so a Hindi or French resume can match an English job description.</li>
+    <li><strong>Match requirements.</strong> Each requirement is checked against the most relevant passages, and
+      the evidence found is kept.</li>
     <li><strong>Rank.</strong> Score = {{ coverage_pct }}% requirement coverage + {{ semantic_pct }}% semantic similarity,
       plus the optional profile bonus.</li>
     {% if llm.configured %}
-    <li><strong>Explain (optional).</strong> {{ llm.name }} writes a short assessment of the top candidates:
+    <li><strong>Explain (optional).</strong> An AI assistant writes a short assessment of the top candidates:
       strengths, gaps and interview questions.</li>
     {% endif %}
   </ol>

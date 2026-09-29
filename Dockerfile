@@ -42,7 +42,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 # ---------------------------------------------------------------- runtime -------------
 FROM ${PYTHON_IMAGE} AS runtime
-# Tesseract is the CPU fallback OCR; Chandra (GPU) runs as a separate service.
+# Built-in fallback OCR for scans when the OCR service is unavailable.
 ARG TESSERACT_PACKAGES="eng hin mar"
 RUN apt-get update \
  && apt-get install -y --no-install-recommends tesseract-ocr \

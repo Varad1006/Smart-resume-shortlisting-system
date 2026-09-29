@@ -591,9 +591,7 @@ class ShortlistService:
                 " characters)."
             )
         if options.include_insights and self._summarizer is None:
-            raise InvalidInputError(
-                "AI summaries are not configured on this server (set LLM_API_KEY)."
-            )
+            raise InvalidInputError("AI summaries are not available on this server.")
         size = options.shortlist_size
         if size is not None and not 1 <= size <= self.limits.max_shortlist_size:
             raise InvalidInputError(

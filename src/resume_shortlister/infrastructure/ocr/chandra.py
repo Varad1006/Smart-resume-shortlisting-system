@@ -107,7 +107,7 @@ class ChandraOcrEngine:
 
     def status(self) -> list[OcrEngineStatus]:
         available = self.is_available()
-        return [OcrEngineStatus(name="chandra", available=available, detail=self._detail)]
+        return [OcrEngineStatus(name="chandra-server", available=available, detail=self._detail)]
 
     # ------------------------------------------------------------- recognition
     def _inference_manager(self):  # type: ignore[no-untyped-def]

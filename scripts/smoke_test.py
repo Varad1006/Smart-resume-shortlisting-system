@@ -13,6 +13,13 @@ from pathlib import Path
 import httpx
 
 SAMPLES = Path(__file__).resolve().parent.parent / "samples"
+LABELS = {
+    "text_layer": "digital PDF",
+    "docx": "Word",
+    "plain_text": "text",
+    "chandra": "scan",
+    "tesseract": "scan",
+}
 
 
 def main() -> None:
@@ -29,10 +36,12 @@ def main() -> None:
 
     with httpx.Client(base_url=args.url, timeout=120) as client:
         status = client.get("/api/v1/status").json()
-        engines = ", ".join(
-            f"{e['name']}={'up' if e['available'] else 'down'}" for e in status["ocr"]["engines"]
+        scans = any(e["available"] for e in status["ocr"]["engines"])
+        ai = status.get("llm", {}).get("configured", False)
+        print(
+            f"Server {status['version']} | scans: {'ready' if scans else 'unavailable'} | "
+            f"AI summaries: {'ready' if ai else 'off'}"
         )
-        print(f"Server {status['version']} | OCR mode {status['ocr']['mode']} ({engines})")
 
         response = client.post(
             "/api/v1/shortlists",
@@ -64,14 +73,14 @@ def main() -> None:
     result = run["result"]
     print(f"\nRequirements: {len(result['requirements'])} | timings: {result['timings']}")
     header = (
-        f"{'#':>3}  {'file':<34}{'lang':>5}  {'read with':<24}"
+        f"{'#':>3}  {'file':<34}{'lang':>5}  {'format':<24}"
         f"{'sem':>6}{'cov':>6}{'bonus':>6}{'final':>7}"
     )
     print(header)
     print("-" * len(header))
     for c in result["candidates"]:
         rank = c["final_rank"] or "-"
-        methods = "+".join(c["extraction_methods"])
+        methods = "+".join(dict.fromkeys(LABELS.get(m, m) for m in c["extraction_methods"]))
         print(
             f"{rank:>3}  {c['filename']:<34}{c['language'] or '?':>5}  {methods:<24}"
             f"{c['semantic_score']:6.1f}{c['coverage_score'] or 0:6.1f}{c['social_bonus']:6.1f}"

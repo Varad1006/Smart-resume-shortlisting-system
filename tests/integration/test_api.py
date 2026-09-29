@@ -25,9 +25,14 @@ from tests.fakes import (
 )
 
 
-@pytest.fixture
-def client(tmp_path):
-    settings = Settings(database_path=tmp_path / "api.db", max_file_mb=1, max_total_mb=2)
+def make_client(tmp_path, **overrides) -> TestClient:
+    settings = Settings(
+        _env_file=None,
+        database_path=tmp_path / "api.db",
+        max_file_mb=1,
+        max_total_mb=2,
+        **overrides,
+    )
     repository = SqliteShortlistRepository(settings.database_path)
     service = ShortlistService(
         extractor=DocumentExtractor(None),  # real extractor, OCR disabled
@@ -46,7 +51,12 @@ def client(tmp_path):
         status=lambda: {"ocr": {"mode": "none", "engines": []}, "models": {}},
         startup_hooks=[repository.initialize],
     )
-    with TestClient(create_app(container=container)) as test_client:
+    return TestClient(create_app(container=container))
+
+
+@pytest.fixture
+def client(tmp_path):
+    with make_client(tmp_path) as test_client:
         yield test_client
 
 
@@ -88,7 +98,8 @@ def test_full_shortlist_flow(client):
     shortlisted = [c for c in result["candidates"] if c["shortlisted"]]
     assert [c["filename"] for c in shortlisted] == ["android.txt", "web.txt"]
     assert shortlisted[0]["social_bonus"] > 0
-    assert shortlisted[0]["insight"]["model"] == "fake-model"
+    assert shortlisted[0]["insight"]["summary"].startswith("Scored ")
+    assert "model" not in shortlisted[0]["insight"]  # no model names in exports
     assert run["options"]["include_insights"] is True
     assert result["skipped"][0]["filename"] == "scan.png"  # image but OCR disabled
     assert run["progress"]["stage"] == "done"
@@ -157,12 +168,30 @@ def test_pages_and_system_endpoints(client):
     home = client.get("/")
     assert home.status_code == 200
     assert "Job description" in home.text and "70% requirement coverage" in home.text
-    assert "Write AI summaries for the top 5 candidates with" in home.text
-    assert "Fake LLM" in home.text and "api.groq.com" in home.text
+    assert "Write AI summaries for the top 5 candidates" in home.text
+    for hidden in (
+        "Fake LLM",
+        "api.groq.com",
+        "GPT",
+        "Groq",
+        "Chandra",
+        "Tesseract",
+        'href="/docs"',
+    ):
+        assert hidden not in home.text
     assert client.get("/health").json() == {"status": "ok"}
     status = client.get("/api/v1/status").json()
     assert status["status"] == "ok" and status["ocr"]["mode"] == "none"
     assert client.get("/static/css/app.css").status_code == 200
     assert f"/static/css/app.css?v={asset_version()}" in home.text  # content-hash cache busting
     assert client.get("/static/js/app.js").status_code == 200
-    assert client.get("/openapi.json").json()["info"]["title"] == "Smart Resume Shortlisting System"
+    assert client.get("/docs").status_code == 404  # interactive docs are off by default
+    assert client.get("/openapi.json").status_code == 404
+
+
+def test_interactive_docs_can_be_enabled(tmp_path):
+    with make_client(tmp_path, enable_docs=True) as client:
+        assert client.get("/docs").status_code == 200
+        assert client.get("/openapi.json").json()["info"]["title"] == (
+            "Smart Resume Shortlisting System"
+        )

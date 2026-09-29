@@ -134,5 +134,5 @@ def test_fallback_tries_next_engine_after_failure():
 def test_fallback_errors():
     with pytest.raises(OcrUnavailableError):
         FallbackOcrEngine([StubEngine("a", available=False)]).recognize([])
-    with pytest.raises(ExtractionError, match="All OCR engines failed"):
+    with pytest.raises(ExtractionError, match="could not be read"):
         FallbackOcrEngine([StubEngine("a", fail=True)]).recognize([])

@@ -27,9 +27,6 @@ dependencies = [
     "openai>=1.60",
 ]
 
-[project.scripts]
-resume-shortlister-download-models = "resume_shortlister.download_models:main"
-
 [dependency-groups]
 dev = [
     "pytest>=8.3",
@@ -60,7 +57,7 @@ explicit = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra -m 'not slow'"
-markers = ["slow: downloads and runs the real ML models (run with: pytest -m slow)"]
+markers = ["slow: end-to-end ranking quality, downloads ~1 GB on first run (pytest -m slow)"]
 filterwarnings = [
     "ignore::DeprecationWarning:langdetect.*",
     "ignore::DeprecationWarning:chandra.settings",  # upstream uses class-based pydantic config

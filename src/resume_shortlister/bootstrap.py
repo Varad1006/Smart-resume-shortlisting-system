@@ -18,6 +18,7 @@ from resume_shortlister.infrastructure.nlp.language import LangDetectLanguageDet
 from resume_shortlister.infrastructure.nlp.reranker import CrossEncoderReranker
 from resume_shortlister.infrastructure.ocr.base import OcrEngine
 from resume_shortlister.infrastructure.ocr.chandra import ChandraOcrEngine
+from resume_shortlister.infrastructure.ocr.chandra_hosted import HostedChandraOcrEngine
 from resume_shortlister.infrastructure.ocr.fallback import FallbackOcrEngine
 from resume_shortlister.infrastructure.ocr.tesseract import TesseractOcrEngine
 from resume_shortlister.infrastructure.persistence.sqlite_repository import (
@@ -58,25 +59,36 @@ class Container:
 
 
 def build_ocr_engine(settings: Settings) -> OcrEngine | None:
-    def chandra() -> ChandraOcrEngine:
-        return ChandraOcrEngine(
-            settings.chandra_api_base,
-            model_name=settings.chandra_model_name,
-            api_key=settings.chandra_api_key.get_secret_value(),
-            prompt_type=settings.chandra_prompt_type,
-            max_retries=settings.chandra_max_retries,
+    """Preference order: self-hosted Chandra, hosted Chandra, then Tesseract (CPU)."""
+    chandra: list[OcrEngine] = []
+    if settings.chandra_server_url:
+        chandra.append(
+            ChandraOcrEngine(
+                settings.chandra_server_url,
+                model_name=settings.chandra_model_name,
+                api_key=settings.chandra_server_key.get_secret_value(),
+                prompt_type=settings.chandra_prompt_type,
+                max_retries=settings.chandra_max_retries,
+            )
         )
-
-    def tesseract() -> TesseractOcrEngine:
-        return TesseractOcrEngine(settings.tesseract_langs)
+    if settings.chandra_api_key:
+        chandra.append(
+            HostedChandraOcrEngine(
+                settings.chandra_api_key.get_secret_value(),
+                base_url=settings.chandra_hosted_url,
+                mode=settings.chandra_mode,
+            )
+        )
 
     if settings.ocr_engine == "none":
         return None
-    if settings.ocr_engine == "chandra":
-        return FallbackOcrEngine([chandra()])
     if settings.ocr_engine == "tesseract":
-        return FallbackOcrEngine([tesseract()])
-    return FallbackOcrEngine([chandra(), tesseract()])
+        return FallbackOcrEngine([TesseractOcrEngine(settings.tesseract_langs)])
+    if settings.ocr_engine == "chandra":
+        if not chandra:
+            raise ValueError("OCR_ENGINE=chandra needs CHANDRA_API_KEY or CHANDRA_SERVER_URL")
+        return FallbackOcrEngine(chandra)
+    return FallbackOcrEngine([*chandra, TesseractOcrEngine(settings.tesseract_langs)])
 
 
 def build_container(settings: Settings) -> Container:

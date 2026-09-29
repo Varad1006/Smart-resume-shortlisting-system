@@ -8,6 +8,7 @@ requirement evidence) so they fit free-tier token-per-minute limits.
 from __future__ import annotations
 
 import json
+import logging
 import re
 from typing import Any
 from urllib.parse import urlparse
@@ -19,6 +20,8 @@ from openai import AsyncOpenAI
 from resume_shortlister.application.dto import InsightRequest
 from resume_shortlister.domain.errors import InsightError
 from resume_shortlister.domain.models import CandidateInsight
+
+logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = """You are an experienced technical recruiter. Assess ONE candidate against a \
 job using only the resume text and the automated requirement-match evidence you are given.
@@ -82,7 +85,7 @@ def _clean_list(value: Any, max_items: int) -> tuple[str, ...]:
     return tuple(item for item in items if item)[:max_items]
 
 
-def parse_insight(content: str, model: str) -> CandidateInsight:
+def parse_insight(content: str) -> CandidateInsight:
     """Parse the model's JSON (tolerating code fences or stray prose around it)."""
     text = _FENCE.sub("", content.strip())
     try:
@@ -94,10 +97,10 @@ def parse_insight(content: str, model: str) -> CandidateInsight:
         except json.JSONDecodeError:
             data = None
     if not isinstance(data, dict):
-        raise InsightError("The AI model did not return valid JSON.")
+        raise InsightError("The AI service returned an unreadable answer.")
     summary = _clean_text(data.get("summary"), 800)
     if not summary:
-        raise InsightError("The AI model returned an empty summary.")
+        raise InsightError("The AI service returned an empty summary.")
     return CandidateInsight(
         summary=summary,
         strengths=_clean_list(data.get("strengths"), _LIMITS["strengths"]),
@@ -105,7 +108,6 @@ def parse_insight(content: str, model: str) -> CandidateInsight:
         interview_questions=_clean_list(
             data.get("interview_questions"), _LIMITS["interview_questions"]
         ),
-        model=model,
     )
 
 
@@ -162,18 +164,28 @@ class OpenAICompatibleSummarizer:
         try:
             completion = await self._client.chat.completions.create(**options)
         except openai.AuthenticationError as exc:
-            raise InsightError(f"{self._host} rejected the API key (HTTP 401).") from exc
+            logger.warning("AI summary rejected by %s: %s", self._host, _error_detail(exc))
+            raise InsightError("The AI service rejected the configured key.") from exc
         except openai.RateLimitError as exc:
-            raise InsightError(f"{self._host} rate limit reached; try again in a minute.") from exc
+            logger.warning("AI summary rate limited by %s", self._host)
+            raise InsightError("The AI service is busy; try again in a minute.") from exc
         except openai.APIStatusError as exc:
+            logger.warning(
+                "AI summary failed at %s (HTTP %s): %s",
+                self._host,
+                exc.status_code,
+                _error_detail(exc),
+            )
             raise InsightError(
-                f"{self._host} returned HTTP {exc.status_code}: {_error_detail(exc)}"
+                f"The AI service returned an error (HTTP {exc.status_code})."
             ) from exc
         except (openai.APIConnectionError, openai.APITimeoutError) as exc:
-            raise InsightError(f"Could not reach {self._host} ({type(exc).__name__}).") from exc
+            logger.warning("AI summary could not reach %s: %r", self._host, exc)
+            raise InsightError("The AI service could not be reached.") from exc
 
         choice = completion.choices[0]
         content = choice.message.content or ""
         if not content.strip() and choice.finish_reason == "length":
-            raise InsightError("The AI response was cut off; raise LLM_MAX_TOKENS.")
-        return parse_insight(content, self._model)
+            logger.warning("AI summary truncated; raise LLM_MAX_TOKENS")
+            raise InsightError("The AI summary was cut off.")
+        return parse_insight(content)

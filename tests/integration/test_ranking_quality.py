@@ -1,4 +1,4 @@
-"""Ranking quality with the real multilingual models (downloads ~1 GB on first run).
+"""End-to-end ranking quality (downloads ~1 GB on first run).
 
 Run with:  uv run pytest -m slow
 """

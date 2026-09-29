@@ -1,5 +1,5 @@
 # Default:         docker compose up --build            -> app on http://localhost:8000
-# With Chandra:    docker compose --profile gpu up      -> also starts a Chandra OCR server
+# Self-hosted OCR: docker compose --profile gpu up      -> also starts a local OCR server
 #                  (needs an NVIDIA GPU with >= 24 GB VRAM and the NVIDIA container toolkit)
 name: resume-shortlister
 
@@ -17,8 +17,8 @@ services:
       - path: .env
         required: false
     environment:
-      # Point this at any OpenAI-compatible server hosting datalab-to/chandra-ocr-2.
-      CHANDRA_API_BASE: ${CHANDRA_API_BASE:-http://chandra:8000/v1}
+      # Self-hosted OCR server (only reachable when the gpu profile is running).
+      CHANDRA_SERVER_URL: ${CHANDRA_SERVER_URL:-http://chandra:8000/v1}
     volumes:
       - app-data:/data
     restart: unless-stopped

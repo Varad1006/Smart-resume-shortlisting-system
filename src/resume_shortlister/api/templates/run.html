@@ -110,7 +110,6 @@
       <section class="insight" aria-label="AI summary">
         <div class="insight-head">
           <span class="ai-badge">AI summary</span>
-          <span class="muted small">{{ c.insight.model }}</span>
         </div>
         <p>{{ c.insight.summary }}</p>
         <div class="insight-grid">
@@ -195,7 +194,7 @@
     <div class="card table-wrap">
       <table class="table">
         <thead>
-          <tr><th class="num">Stage 1</th><th>File</th><th>Language</th><th>Read with</th><th class="num">Semantic</th><th class="num">Coverage</th><th class="num">Final</th></tr>
+          <tr><th class="num">Stage 1</th><th>File</th><th>Language</th><th>Format</th><th class="num">Semantic</th><th class="num">Coverage</th><th class="num">Final</th></tr>
         </thead>
         <tbody>
           {% for c in result.by_retrieval %}

@@ -18,7 +18,6 @@
       <nav aria-label="Main">
         <a href="/" {% if request.url.path == "/" %}aria-current="page"{% endif %}>New shortlist</a>
         <a href="/shortlists" {% if request.url.path.startswith("/shortlists") %}aria-current="page"{% endif %}>History</a>
-        <a href="/docs">API</a>
       </nav>
     </div>
   </header>
@@ -26,7 +25,7 @@
     {% block content %}{% endblock %}
   </main>
   <footer class="footer">
-    Resumes are processed on this server. Only scores and short evidence snippets are stored.
+    Only scores and short evidence snippets are stored. Uploaded files are never saved.
   </footer>
 </body>
 </html>

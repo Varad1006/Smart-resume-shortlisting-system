@@ -75,7 +75,6 @@ async def test_summarize_sends_a_compact_json_mode_request():
         strengths=("Kotlin",),
         gaps=("No Hilt",),
         interview_questions=("Why Compose?",),
-        model="openai/gpt-oss-120b",
     )
     assert captured["url"] == "https://api.groq.com/openai/v1/chat/completions"
     assert captured["auth"] == "Bearer test-key"
@@ -104,9 +103,9 @@ async def test_reasoning_effort_is_optional():
 @pytest.mark.parametrize(
     ("status", "message"),
     [
-        (401, "api.groq.com rejected the API key (HTTP 401)."),
-        (429, "api.groq.com rate limit reached; try again in a minute."),
-        (500, "api.groq.com returned HTTP 500: boom"),
+        (401, "The AI service rejected the configured key."),
+        (429, "The AI service is busy; try again in a minute."),
+        (500, "The AI service returned an error (HTTP 500)."),
     ],
 )
 async def test_http_errors_become_readable_insight_errors(status, message):
@@ -122,7 +121,7 @@ async def test_unreachable_host():
     def handler(request: httpx.Request) -> httpx.Response:
         raise httpx.ConnectError("no route", request=request)
 
-    with pytest.raises(InsightError, match=r"Could not reach api\.groq\.com"):
+    with pytest.raises(InsightError, match="could not be reached"):
         await summarizer_for(handler).summarize(REQUEST)
 
 
@@ -130,7 +129,7 @@ async def test_truncated_response_asks_for_more_tokens():
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json=completion("", finish_reason="length"))
 
-    with pytest.raises(InsightError, match="LLM_MAX_TOKENS"):
+    with pytest.raises(InsightError, match="cut off"):
         await summarizer_for(handler).summarize(REQUEST)
 
 
@@ -149,7 +148,7 @@ def test_messages_carry_rules_and_the_redacted_resume():
     ],
 )
 def test_parse_insight_tolerates_fences_and_prose(content):
-    assert parse_insight(content, "m").summary == "Strong fit."
+    assert parse_insight(content).summary == "Strong fit."
 
 
 def test_parse_insight_normalises_lists():
@@ -159,7 +158,7 @@ def test_parse_insight_normalises_lists():
         "gaps": "not a list",
         "interview_questions": ["q" * 400],
     }
-    insight = parse_insight(json.dumps(data), "m")
+    insight = parse_insight(json.dumps(data))
     assert insight.summary == "Good fit"
     assert insight.strengths == ("a", "b", "c", "d")
     assert insight.gaps == ()
@@ -169,4 +168,4 @@ def test_parse_insight_normalises_lists():
 @pytest.mark.parametrize("content", ["not json at all", "[1, 2]", '{"summary": "  "}'])
 def test_parse_insight_rejects_unusable_output(content):
     with pytest.raises(InsightError):
-        parse_insight(content, "m")
+        parse_insight(content)

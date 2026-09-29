@@ -118,7 +118,6 @@ class CandidateInsight:
     strengths: tuple[str, ...] = ()
     gaps: tuple[str, ...] = ()
     interview_questions: tuple[str, ...] = ()
-    model: str = ""  # which model wrote it
 
 
 @dataclass(slots=True)

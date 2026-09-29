@@ -20,14 +20,7 @@ from resume_shortlister.logging_config import configure_logging
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 MULTIPART_OVERHEAD = 1024 * 1024  # form fields + boundaries on top of the file bytes
 
-DESCRIPTION = """
-Rank resumes against a job description with explainable, requirement-level scores.
-
-* **Extraction**: PDF text layer, DOCX, or OCR (Chandra, falling back to Tesseract).
-* **Stage 1**: multilingual semantic retrieval over resume passages.
-* **Stage 2**: cross-encoder matching of every job requirement, with evidence.
-* **Optional**: bonus for public GitHub / LeetCode / CodeChef activity.
-"""
+DESCRIPTION = "Rank resumes against a job description with explainable, requirement-level scores."
 
 
 def create_app(settings: Settings | None = None, container: Container | None = None) -> FastAPI:
@@ -44,11 +37,15 @@ def create_app(settings: Settings | None = None, container: Container | None = N
         finally:
             await container.shutdown()
 
+    docs = container.settings.enable_docs
     app = FastAPI(
         title="Smart Resume Shortlisting System",
         version=__version__,
         description=DESCRIPTION,
         lifespan=lifespan,
+        docs_url="/docs" if docs else None,
+        redoc_url=None,
+        openapi_url="/openapi.json" if docs else None,
     )
     app.state.container = container
 

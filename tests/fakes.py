@@ -128,7 +128,6 @@ class FakeSummarizer:
         return CandidateInsight(
             summary=f"Scored {request.final_score:.0f} for {request.job_title}.",
             strengths=tuple(met[:2]),
-            model="fake-model",
         )
 
 

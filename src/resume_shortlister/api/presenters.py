@@ -12,11 +12,11 @@ from resume_shortlister.domain.models import ExtractionMethod
 from resume_shortlister.domain.scoring import match_band
 
 METHOD_LABELS = {
-    ExtractionMethod.TEXT_LAYER: "PDF text",
-    ExtractionMethod.DOCX: "DOCX",
-    ExtractionMethod.PLAIN_TEXT: "Plain text",
-    ExtractionMethod.CHANDRA: "Chandra OCR",
-    ExtractionMethod.TESSERACT: "Tesseract OCR",
+    ExtractionMethod.TEXT_LAYER: "Digital PDF",
+    ExtractionMethod.DOCX: "Word document",
+    ExtractionMethod.PLAIN_TEXT: "Text file",
+    ExtractionMethod.CHANDRA: "Scan",
+    ExtractionMethod.TESSERACT: "Scan",
 }
 
 LANGUAGE_NAMES = {

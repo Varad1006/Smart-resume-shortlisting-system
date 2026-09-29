@@ -207,7 +207,6 @@ async def test_insights_are_written_for_the_top_shortlisted_candidates_only(make
     assert result.shortlisted[2].insight is None
     assert result.insights_enabled
     best = result.shortlisted[0]
-    assert best.insight.model == "fake-model"
     assert (
         best.insight.summary.startswith("Scored ") and "Android Developer" in best.insight.summary
     )
@@ -252,7 +251,7 @@ async def test_insights_are_skipped_unless_requested(make_service):
 async def test_insights_require_a_configured_summarizer(make_service):
     service = make_service()
     assert service.summarizer_name is None
-    with pytest.raises(InvalidInputError, match="LLM_API_KEY"):
+    with pytest.raises(InvalidInputError, match="not available"):
         await service.submit(ANDROID_JD, RESUMES, ShortlistOptions(include_insights=True))
 
 

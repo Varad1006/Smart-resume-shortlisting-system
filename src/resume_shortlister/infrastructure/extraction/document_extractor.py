@@ -121,9 +121,7 @@ class DocumentExtractor:
 
     def _require_ocr(self) -> OcrEngine:
         if self._ocr is None:
-            raise OcrUnavailableError(
-                "This file is a scan/image and needs OCR, but OCR is disabled (OCR_ENGINE=none)."
-            )
+            raise OcrUnavailableError("This file is a scan, and reading scans is turned off.")
         return self._ocr
 
     def _from_pdf(self, filename: str, content: bytes) -> ExtractedDocument:
@@ -149,7 +147,8 @@ class DocumentExtractor:
             except ExtractionError as exc:
                 if not methods:  # nothing readable without OCR
                     raise
-                warnings.append(f"{len(scanned)} scanned page(s) could not be read: {exc}")
+                logger.warning("Scanned pages of a PDF could not be read: %s", exc)
+                warnings.append(f"{len(scanned)} scanned page(s) could not be read.")
             else:
                 for page, text in zip(scanned, output.texts, strict=True):
                     page.text = text

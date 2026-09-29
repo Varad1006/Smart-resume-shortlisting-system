@@ -205,25 +205,22 @@
     try {
       const response = await fetch("/api/v1/status", { cache: "no-store" });
       const status = await response.json();
-      const engines = status.ocr.engines || [];
-      const chandra = engines.find((e) => e.name === "chandra");
-      const tesseract = engines.find((e) => e.name === "tesseract");
-      if (chandra && chandra.available) {
+      const engines = (status.ocr.engines || []).filter((e) => e.available);
+      if (engines.some((e) => e.name.startsWith("chandra"))) {
         dot.className = "dot ok";
-        text.textContent = "Chandra OCR connected: scans, handwriting and 90+ languages supported";
-      } else if (tesseract && tesseract.available) {
+        text.textContent = "Scans, photos and handwriting supported in 90+ languages";
+      } else if (engines.length) {
         dot.className = "dot warn";
-        text.textContent = "Chandra OCR offline: using Tesseract fallback for scans";
+        text.textContent = "Scans supported (basic quality)";
       } else if (status.ocr.mode === "none") {
         dot.className = "dot warn";
-        text.textContent = "OCR disabled: only text PDFs, DOCX and TXT can be read";
+        text.textContent = "Only digital PDFs, Word and text files can be read";
       } else {
         dot.className = "dot bad";
-        text.textContent = "No OCR engine available: scanned resumes will be skipped";
+        text.textContent = "Scanned resumes can't be read right now";
       }
-      chip.title = engines.map((e) => `${e.name}: ${e.detail}`).join("\n");
     } catch (_) {
-      text.textContent = "Could not check OCR status";
+      text.textContent = "Could not check scan support";
     }
   }
 

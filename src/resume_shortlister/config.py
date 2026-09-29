@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, SecretStr
+from pydantic import AliasChoices, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from resume_shortlister.application.dto import UploadLimits
@@ -15,13 +15,16 @@ MB = 1024 * 1024
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=".env", env_file_encoding="utf-8", extra="ignore", populate_by_name=True
+    )
 
     # --- Server -------------------------------------------------------------------
     log_level: str = "INFO"
     database_path: Path = Path("data/shortlister.db")
     max_concurrent_runs: int = Field(1, ge=1, le=8)
     warmup_models: bool = False  # load ML models at startup instead of on first use
+    enable_docs: bool = False  # interactive docs at /docs (off by default)
 
     # --- Uploads ------------------------------------------------------------------
     max_files: int = Field(50, ge=1, le=500)
@@ -30,11 +33,19 @@ class Settings(BaseSettings):
     max_pdf_pages: int = Field(10, ge=1, le=100)
 
     # --- OCR ----------------------------------------------------------------------
-    # auto: Chandra when its server is reachable, otherwise Tesseract.
+    # auto: self-hosted Chandra server, then hosted Chandra, then Tesseract on the CPU.
     ocr_engine: Literal["auto", "chandra", "tesseract", "none"] = "auto"
-    chandra_api_base: str = "http://localhost:8001/v1"
+    # Hosted Chandra (Datalab). Neutral names first; the vendor-specific ones still work.
+    chandra_api_key: SecretStr | None = Field(
+        None, validation_alias=AliasChoices("OCR_KEY", "CHANDRA_API_KEY")
+    )
+    chandra_mode: Literal["fast", "balanced", "accurate"] = Field(
+        "balanced", validation_alias=AliasChoices("OCR_MODE", "CHANDRA_MODE")
+    )
+    chandra_hosted_url: str = "https://www.datalab.to"
+    chandra_server_url: str | None = None  # self-hosted OpenAI-compatible Chandra server
+    chandra_server_key: SecretStr = SecretStr("EMPTY")
     chandra_model_name: str = "chandra"
-    chandra_api_key: SecretStr = SecretStr("EMPTY")
     chandra_prompt_type: Literal["ocr_layout", "ocr"] = "ocr_layout"
     chandra_max_retries: int = Field(2, ge=0, le=10)
     tesseract_langs: str = "eng"  # e.g. "eng+hin+mar" (install the matching language packs)
@@ -63,7 +74,9 @@ class Settings(BaseSettings):
 
     # --- AI summaries (any OpenAI-compatible chat API; default GPT-OSS 120B on Groq) --
     # Disabled unless LLM_API_KEY is set. Summaries explain a ranking, never change it.
-    llm_api_key: SecretStr | None = None
+    llm_api_key: SecretStr | None = Field(
+        None, validation_alias=AliasChoices("AI_SUMMARY_KEY", "LLM_API_KEY")
+    )
     llm_base_url: str = "https://api.groq.com/openai/v1"
     llm_model: str = "openai/gpt-oss-120b"
     llm_display_name: str = "GPT-OSS 120B [Groq]"
@@ -80,6 +93,14 @@ class Settings(BaseSettings):
     github_token: SecretStr | None = None
     social_timeout_seconds: float = Field(8.0, gt=0)
     social_cache_ttl_seconds: float = Field(3600, ge=0)
+
+    @field_validator(
+        "chandra_api_key", "chandra_server_url", "llm_api_key", "github_token", mode="before"
+    )
+    @classmethod
+    def _blank_means_unset(cls, value: object) -> object:
+        """``KEY=`` in .env means "not configured", not an empty key."""
+        return None if isinstance(value, str) and not value.strip() else value
 
     def scoring_policy(self) -> ScoringPolicy:
         return ScoringPolicy(
